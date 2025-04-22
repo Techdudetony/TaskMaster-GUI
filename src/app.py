@@ -1,12 +1,14 @@
 import sys
+from datetime import datetime
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QListWidget, QMessageBox,
-    QLineEdit, QComboBox, QDateEdit, QDialog, QDialogButtonBox, QFormLayout,
+    QLineEdit, QComboBox, QDateEdit, QDialog, QDialogButtonBox, QFormLayout, QListWidgetItem
 )
-from PyQt6.QtGui import QIcon
-from PyQt6.QtCore import (Qt, QDate)
+from PyQt6.QtCore import Qt, QDate
+
 from logic.storage import load_tasks, save_tasks
 from logic.task import Task
+from logic.utils import style_task_item  # Modular styling logic
 
 class TaskMasterApp(QWidget):
     def __init__(self):
@@ -62,11 +64,13 @@ class TaskMasterApp(QWidget):
         btn_delete.clicked.connect(self.delete_selected_task)
         
         # Load and display tasks
-        self.tasks = load_tasks() # store loaded tasks
+        self.tasks = load_tasks()
         for task in self.tasks:
             checkbox = '✔' if task.completed else ' '
             display = f"[{checkbox}] {task.title} (Priority: {task.priority}, Due: {task.due_date})"
-            self.task_list.addItem(display)
+            list_item = QListWidgetItem(display)
+            self.task_list.addItem(list_item)
+            style_task_item(list_item, task)
         
     def show_popup(self, message):
         QMessageBox.information(self, "Action", message)
@@ -84,11 +88,12 @@ class TaskMasterApp(QWidget):
             )
             self.tasks.append(new_task)
             save_tasks(self.tasks)
-            
-            # Update list visually
+
             checkbox = "✔" if new_task.completed else " "
             display = f"[{checkbox}] {new_task.title} (Priority: {new_task.priority}, Due: {new_task.due_date})"
-            self.task_list.addItem(display)
+            list_item = QListWidgetItem(display)
+            self.task_list.addItem(list_item)
+            style_task_item(list_item, new_task)
         
     def open_edit_task_dialog(self):
         selected_row = self.task_list.currentRow()
@@ -97,12 +102,12 @@ class TaskMasterApp(QWidget):
             return
         
         task = self.tasks[selected_row]
-        dialog = AddTaskDialog(self, task) # pass the task to prefill
+        dialog = AddTaskDialog(self, task)
         if dialog.exec():
             data = dialog.get_data()
-            task.title=data["title"]
-            task.priority=data["priority"]
-            task.due_date=data["due_date"]
+            task.title = data["title"]
+            task.priority = data["priority"]
+            task.due_date = data["due_date"]
             save_tasks(self.tasks)
             self.refresh_task_list()
             
@@ -113,7 +118,7 @@ class TaskMasterApp(QWidget):
             return
 
         task = self.tasks[selected_row]
-        task.completed = not task.completed  # Toggle status
+        task.completed = not task.completed
         save_tasks(self.tasks)
         self.refresh_task_list()
             
@@ -123,7 +128,6 @@ class TaskMasterApp(QWidget):
             self.show_popup("Please select a task to delete.")
             return
 
-        # Confirm deletion
         confirm = QMessageBox.question(
             self,
             "Confirm Delete",
@@ -141,8 +145,10 @@ class TaskMasterApp(QWidget):
         for task in self.tasks:
             checkbox = "✔" if task.completed else " "
             display = f"[{checkbox}] {task.title} (Priority: {task.priority}, Due: {task.due_date})"
-            self.task_list.addItem(display)
-        
+            list_item = QListWidgetItem(display)
+            self.task_list.addItem(list_item)
+            style_task_item(list_item, task)
+
 class AddTaskDialog(QDialog):
     def __init__(self, parent=None, task=None):
         super().__init__(parent)
@@ -158,7 +164,6 @@ class AddTaskDialog(QDialog):
         self.due_date_input.setCalendarPopup(True)
         self.due_date_input.setDate(QDate.currentDate())
         
-        # Prefill fields if editing
         if task:
             self.title_input.setText(task.title)
             index = self.priority_input.findText(task.priority)
@@ -188,6 +193,6 @@ def main():
     window = TaskMasterApp()
     window.show()
     sys.exit(app.exec())
-    
+
 if __name__ == "__main__":
     main()
