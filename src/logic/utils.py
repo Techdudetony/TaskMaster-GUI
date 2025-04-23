@@ -42,18 +42,31 @@ def is_task_overdue(task) -> bool:
     '''Return True if the task's due date is before today.'''
     try:
         if task.due_date:
-            due = datetime.strptime(task.due_date, "%Y-%m-%d")
-            return due < datetime.now()
-    except ValueError:
-        pass
+            if isinstance(task.due_date, str):
+                due = datetime.strptime(task.due_date.strip(), "%Y-%m-%d").date()
+            elif isinstance(task.due_date, datetime):
+                due = task.due_date.date()
+            else:
+                due = task.due_date  # assume already a date object
+            return due < datetime.now().date()
+    except Exception as e:
+        print(f"[Overdue Error] {task.title}: {e}")
     return False
+
+from PyQt6.QtCore import Qt
 
 def style_task_item(item, task):
     '''
     Style a QListWidgetItem with:
-    - red background if overdue
+    - emoji prefix if overdue
     - colored text based on priority
     '''
+    text = item.text()
+    
     if is_task_overdue(task):
-        item.setBackground(QColor("#FFE5E5"))  # Light red for overdue
+        print(f"[OVERDUE] {task.title} - Due: {task.due_date}")
+        item.setText(f"⚠️ {text}")  # prefix indicator emoji
+        item.setData(Qt.ItemDataRole.UserRole, "overdue")  # for possible future use
+
+    # Color code by priority
     item.setForeground(QColor(get_priority_color(task.priority)))
